@@ -11,33 +11,34 @@
 AddElementTag("microService", $shape=EightSidedShape(), $bgColor="CornflowerBlue", $fontColor="white", $legendText="microservice")
 AddElementTag("storage", $shape=RoundedBoxShape(), $bgColor="lightSkyBlue", $fontColor="white")
 
+Person(sender, "Отправитель")
+Person(courier, "Курьер")
+Person(receiver, "Получатель")
 Person(admin, "Администратор")
-Person(moderator, "Модератор")
-Person(user, "Пользователь")
 
 System_Ext(web_site, "Клиентский веб-сайт", "HTML, CSS, JavaScript, React", "Веб-интерфейс")
 
-System_Boundary(conference_site, "Сайт блогов") {
+System_Boundary(site, "Сайт доставки посылок") {
    'Container(web_site, "Клиентский веб-сайт", ")
-   Container(client_service, "Сервис авторизации", "C++", "Сервис управления пользователями", $tags = "microService")    
-   Container(post_service, "Сервис постов", "C++", "Сервис управления блогами", $tags = "microService") 
-   Container(blog_service, "Сервис блогов", "C++", "Сервис управления постами", $tags = "microService")   
-   ContainerDb(db, "База данных", "MySQL", "Хранение данных о блогах, постах и пользователях", $tags = "storage")
-   
+   Container(user_service, "Сервис регистрации, авиризации", "C++", "Сервис авторизации и CRUD над пользователями", $tags = "microService")    
+   Container(delivery_service, "Сервис доставкок", "C++", "Сервис для создания, редактирования, просмотра доставок", $tags = "microService") 
+   Container(package_service, "Сервис посылкок", "C++", "Сервис для создания, редактирования, просмотра посылок", $tags = "microService")   
+   ContainerDb(db, "База данных", "MySQL", "Хранение данных о пользователях, посылках и доставках", $tags = "storage")
 }
 
-Rel(admin, web_site, "Просмотр, добавление и редактирование информации о пользователях, конференциях и докладах")
-Rel(moderator, web_site, "Модерация контента и пользователей")
-Rel(user, web_site, "Регистрация, просмотр информации о конференциях и докладах и запись на них")
+Rel(sender, web_site, "Создание, просмотр, отмена доставки посылки")
+Rel(receiver, web_site, "Получение информации по доставкам по получателю")
+Rel_R(courier, web_site, "Получение, обновление информации по доставкам")
+Rel_L(admin, web_site, "Получение/обновление/удаление информации по отправителям/курьерам/доставкам")
 
-Rel(web_site, client_service, "Работа с пользователями", "localhost/person")
-Rel(client_service, db, "INSERT/SELECT/UPDATE", "SQL")
+Rel(web_site, user_service, "Авторизация, регистрация", "localhost/auth")
+Rel(user_service, db, "INSERT/SELECT/UPDATE", "SQL")
 
-Rel(web_site, post_service, "Работа с постами", "localhost/pres")
-Rel(post_service, db, "INSERT/SELECT/UPDATE", "SQL")
+Rel(web_site, delivery_service, "Работа с доставками", "localhost/delivery")
+Rel(delivery_service, db, "INSERT/SELECT/UPDATE", "SQL")
 
-Rel(web_site, blog_service, "Работа с блогами", "localhost/conf")
-Rel(blog_service, db, "INSERT/SELECT/UPDATE", "SQL")
+Rel(web_site, package_service, "Работа с изменением состояния доставок", "localhost/package")
+Rel(package_service, db, "INSERT/SELECT/UPDATE", "SQL")
 
 @enduml
 ```
