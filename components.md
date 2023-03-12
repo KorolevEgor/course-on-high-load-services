@@ -8,21 +8,30 @@
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons
+!define DEVICONS2 https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+
+!include DEVICONS2/cplusplus.puml
+!include DEVICONS/mysql.puml
+!include DEVICONS/react.puml
+!include FONTAWESOME/users.puml
+
 AddElementTag("microService", $shape=EightSidedShape(), $bgColor="CornflowerBlue", $fontColor="white", $legendText="microservice")
 AddElementTag("storage", $shape=RoundedBoxShape(), $bgColor="lightSkyBlue", $fontColor="white")
 
-Person(sender, "Отправитель")
-Person(courier, "Курьер")
-Person(receiver, "Получатель")
-Person(admin, "Администратор")
+Person(sender, "Отправитель", $sprite="users")
+Person(courier, "Курьер", $sprite="users")
+Person(receiver, "Получатель", $sprite="users")
+Person(admin, "Администратор", $sprite="users")
 
-System_Ext(web_site, "Клиентский веб-сайт", "HTML, CSS, JavaScript, React", "Веб-интерфейс")
+System_Ext(web_site, "Клиентский веб-сайт", "HTML, CSS, JavaScript, React", "Веб-интерфейс", $sprite="react")
 
 System_Boundary(site, "Сайт доставки посылок") {
-   Container(user_service, "Сервис регистрации, авиризации", "C++", "Сервис авторизации и CRUD над пользователями", $tags = "microService")    
-   Container(delivery_service, "Сервис доставкок", "C++", "Сервис для создания, редактирования, просмотра доставок", $tags = "microService") 
-   Container(package_service, "Сервис посылкок", "C++", "Сервис для создания, редактирования, просмотра посылок", $tags = "microService")   
-   ContainerDb(db, "База данных", "MySQL", "Хранение данных о пользователях, посылках и доставках", $tags = "storage")
+   Container(user_service, "Сервис регистрации, авиризации", "C++", "Сервис авторизации и CRUD над пользователями", $tags = "microService", $sprite="cplusplus")
+   Container(delivery_service, "Сервис доставкок", "C++", "Сервис для создания, редактирования, просмотра доставок", $tags = "microService", $sprite="cplusplus")
+   Container(package_service, "Сервис посылкок", "C++", "Сервис для создания, редактирования, просмотра посылок", $tags = "microService", $sprite="cplusplus")
+   ContainerDb(db, "База данных", "MySQL", "Хранение данных о пользователях, посылках и доставках", $tags = "storage", $sprite="mysql")
 }
 
 Rel(sender, web_site, "Создание, просмотр, отмена доставки посылки")
@@ -36,7 +45,7 @@ Rel(user_service, db, "INSERT/SELECT/UPDATE", "SQL")
 Rel(web_site, delivery_service, "Работа с доставками", "localhost/delivery")
 Rel(delivery_service, db, "INSERT/SELECT/UPDATE", "SQL")
 
-Rel(web_site, package_service, "Работа с изменением состояния доставок", "localhost/package")
+Rel(web_site, package_service, "Работа с посылками", "localhost/package")
 Rel(package_service, db, "INSERT/SELECT/UPDATE", "SQL")
 
 @enduml
