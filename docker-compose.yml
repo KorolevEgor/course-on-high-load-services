@@ -21,18 +21,17 @@ services:
     ports:
       - 3360:3306
     healthcheck:
-      test: "/usr/bin/mariadb --user=stud --password=stud --execute \"SHOW DATABASES;\""
-      interval: 15s
-      timeout: 1s
+      test: "/usr/bin/mysql --user=stud --password=stud --execute \"SHOW DATABASES;\""
+      timeout: 20s
       retries: 5
     volumes:
       - db-node-ex01-data:/var/lib/mysql
 
-  my_service:
+  user_service:
     build:
-      context: my_service
-      dockerfile: Dockerfile
-    container_name: my_service
+      context: .
+      dockerfile: user_service/Dockerfile
+    container_name: user_service
     environment:
       - DB_HOST=mai-db-node-ex01
       - DB_PORT=3306
@@ -46,17 +45,46 @@ services:
     depends_on:
       mai-db-node-ex01:
         condition: service_healthy
-  # other_server:
-  #   build:
-  #     context: other_server
-  #     dockerfile: Dockerfile
-  #   container_name: other_server
-  #   environment:
-  #     - SERVICE_HOST=my_service
-  #   ports:
-  #     - 8081:8081
-  #   networks:
-  #     - arch-network
+
+  package_service:
+    build:
+      context: .
+      dockerfile: package_service/Dockerfile
+    container_name: package_service
+    environment:
+      - DB_HOST=mai-db-node-ex01
+      - DB_PORT=3306
+      - DB_LOGIN=stud
+      - DB_PASSWORD=stud
+      - DB_DATABASE=archdb
+      - SERVICE_HOST=my_service
+    ports:
+      - 8082:8082
+    networks:
+      - arch-network
+    depends_on:
+      mai-db-node-ex01:
+        condition: service_healthy
+
+  delivery_service:
+    build:
+      context: .
+      dockerfile: delivery_service/Dockerfile
+    container_name: delivery_service
+    environment:
+      - DB_HOST=mai-db-node-ex01
+      - DB_PORT=3306
+      - DB_LOGIN=stud
+      - DB_PASSWORD=stud
+      - DB_DATABASE=archdb
+      - SERVICE_HOST=my_service
+    ports:
+      - 8081:8081
+    networks:
+      - arch-network
+    depends_on:
+      mai-db-node-ex01:
+        condition: service_healthy
 
 volumes:
   db-node-ex01-data:
