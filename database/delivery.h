@@ -43,6 +43,7 @@ namespace database
             static std::vector<Delivery> read_by_names(std::string recipient_name,std::string sender_name);
             static std::optional<Delivery> set_state(long id, std::string state);
             void save_to_mysql();
+            void save_new_to_mysql();
 
             Poco::JSON::Object::Ptr toJSON() const;
 

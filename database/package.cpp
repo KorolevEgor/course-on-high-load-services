@@ -26,12 +26,12 @@ namespace database
 
             Poco::Data::Session session = database::Database::get().create_session();
             Statement create_stmt(session);
-            create_stmt << "CREATE TABLE IF NOT EXISTS `Package` (`id` INT NOT NULL AUTO_INCREMENT,"
+            create_stmt << "CREATE TABLE IF NOT EXISTS `Package` (`id` INT PRIMARY KEY NOT NULL AUTO_INCREMENT,"
                         << "`name` VARCHAR(256) NOT NULL,"
                         << "`weight` VARCHAR(256) NOT NULL,"
                         << "`price` VARCHAR(256) NOT NULL,"
-                        << "`login` VARCHAR(256) NOT NULL,"
-                        << "PRIMARY KEY (`id`), KEY `lo` (`login`));",
+                        << "`delivery_id` INT NOT NULL,"
+                        << "FOREIGN KEY (`delivery_id`) REFERENCES `Delivery` (`id`));",
                 now;
         }
 
@@ -56,7 +56,7 @@ namespace database
         root->set("name", _name);
         root->set("weight", _weight);
         root->set("price", _price);
-        root->set("login", _login);
+        root->set("delivery_id", _delivery_id);
 
         return root;
     }
@@ -72,7 +72,7 @@ namespace database
         package.name() = object->getValue<std::string>("name");
         package.weight() = object->getValue<std::string>("weight");
         package.price() = object->getValue<std::string>("price");
-        package.login() = object->getValue<std::string>("login");
+        package.delivery_id() = atol(object->getValue<std::string>("delivery_id").c_str());
 
         return package;
     }
@@ -85,12 +85,12 @@ namespace database
             Poco::Data::Session session = database::Database::get().create_session();
             Poco::Data::Statement select(session);
             Package a;
-            select << "SELECT id, name, weight, price, login FROM Package where id=?",
+            select << "SELECT id, name, weight, price, delivery_id FROM Package where id=?",
                 into(a._id),
                 into(a._name),
                 into(a._weight),
                 into(a._price),
-                into(a._login),
+                into(a._delivery_id),
                 use(id),
                 range(0, 1); //  iterate over result set one row at a time
 
@@ -121,12 +121,12 @@ namespace database
             std::vector<Package> result;
             Package a;
             login += "%";
-            select << "SELECT id, name, weight, price, login FROM Package where login LIKE ?",
+            select << "SELECT p.id, p.name, p.weight, p.price, p.delivery_id FROM Package p join Delivery d where p.delivery_id = d.id and d.recipient_name LIKE ?",
                 into(a._id),
                 into(a._name),
                 into(a._weight),
                 into(a._price),
-                into(a._login),
+                into(a._delivery_id),
                 use(login),
                 range(0, 1); //  iterate over result set one row at a time
 
@@ -159,11 +159,11 @@ namespace database
             Poco::Data::Session session = database::Database::get().create_session();
             Poco::Data::Statement insert(session);
 
-            insert << "INSERT INTO Package (name,weight,price,login) VALUES(?, ?, ?, ?)",
+            insert << "INSERT INTO Package (name,weight,price,delivery_id) VALUES(?, ?, ?, ?)",
                 use(_name),
                 use(_weight),
                 use(_price),
-                use(_login),
+                use(_delivery_id),
 
             insert.execute();
 
@@ -191,14 +191,14 @@ namespace database
         }
     }
 
-    const std::string &Package::get_login() const
+    const long &Package::get_delivery_id() const
     {
-        return _login;
+        return _delivery_id;
     }
 
-    std::string &Package::login()
+    long &Package::delivery_id()
     {
-        return _login;
+        return _delivery_id;
     }
 
     long Package::get_id() const

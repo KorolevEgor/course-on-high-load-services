@@ -26,14 +26,15 @@ namespace database
 
             Poco::Data::Session session = database::Database::get().create_session();
             Statement create_stmt(session);
-            create_stmt << "CREATE TABLE IF NOT EXISTS `Delivery` (`id` INT NOT NULL AUTO_INCREMENT,"
+            create_stmt << "CREATE TABLE IF NOT EXISTS `Delivery` (`id` INT PRIMARY KEY NOT NULL AUTO_INCREMENT,"
                         << "`recipient_name` VARCHAR(256) NOT NULL,"
                         << "`sender_name` VARCHAR(256) NOT NULL,"
                         << "`recipient_addres` VARCHAR(256) NOT NULL,"
                         << "`sender_addres` VARCHAR(256) NOT NULL,"
                         << "`date` VARCHAR(256) NOT NULL,"
                         << "`state` VARCHAR(256) NULL,"
-                        << "PRIMARY KEY (`id`));",
+                        << "FOREIGN KEY (`recipient_name`) REFERENCES `User` (`login`),"
+                        << "FOREIGN KEY (`sender_name`) REFERENCES `User` (`login`));",
                 now;
         }
 
@@ -91,8 +92,13 @@ namespace database
             Poco::Data::Session session = database::Database::get().create_session();
             Poco::Data::Statement select(session);
             Delivery a;
-            select << "SELECT id, state FROM Delivery where id=?",
+            select << "SELECT id, recipient_name, sender_name, recipient_addres, sender_addres, date, state FROM Delivery where id=?",
                 into(a._id),
+                into(a._recipient_name),
+                into(a._sender_name),
+                into(a._recipient_addres),
+                into(a._sender_addres),
+                into(a._date),
                 into(a._state),
                 use(id),
                 range(0, 1); //  iterate over result set one row at a time
@@ -130,7 +136,13 @@ namespace database
             
             Poco::Data::Session session2 = database::Database::get().create_session();
             Poco::Data::Statement select2(session2);
-            select2 << "SELECT state FROM Delivery where id=?",
+            select2 << "SELECT id, recipient_name, sender_name, recipient_addres, sender_addres, date, state FROM Delivery where id=?",
+                into(a._id),
+                into(a._recipient_name),
+                into(a._sender_name),
+                into(a._recipient_addres),
+                into(a._sender_addres),
+                into(a._date),
                 into(a._state),
                 use(id),
                 range(0, 1);
@@ -232,6 +244,11 @@ namespace database
             std::cout << "statement:" << e.what() << std::endl;
             throw;
         }
+    }
+
+    void Delivery::save_new_to_mysql() {
+        _state = "new";
+        this->save_to_mysql();
     }
 
     const std::string &Delivery::get_recipient_name() const

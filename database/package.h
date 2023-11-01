@@ -14,7 +14,7 @@ namespace database
             std::string _name;
             std::string _weight;
             std::string _price;
-            std::string _login;
+            long _delivery_id;
 
         public:
 
@@ -24,13 +24,13 @@ namespace database
             const std::string &get_name() const;
             const std::string &get_weight() const;
             const std::string &get_price() const;
-            const std::string &get_login() const;
+            const long &get_delivery_id() const;
 
             long&        id();
             std::string &name();
             std::string &weight();
             std::string &price();
-            std::string &login();
+            long &delivery_id();
 
             static void init();
             static std::optional<Package> read_by_id(long id);

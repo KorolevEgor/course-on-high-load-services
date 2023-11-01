@@ -29,7 +29,7 @@ namespace database
             create_stmt << "CREATE TABLE IF NOT EXISTS `User` (`id` INT NOT NULL AUTO_INCREMENT,"
                         << "`first_name` VARCHAR(256) NOT NULL,"
                         << "`last_name` VARCHAR(256) NOT NULL,"
-                        << "`login` VARCHAR(256) NOT NULL,"
+                        << "`login` VARCHAR(256) UNIQUE NOT NULL,"
                         << "`password` VARCHAR(256) NOT NULL,"
                         << "`addres` VARCHAR(256) NULL,"
                         << "PRIMARY KEY (`id`),KEY `fn` (`first_name`),KEY `ln` (`last_name`));",
@@ -157,7 +157,8 @@ namespace database
                 into(a._addres),
                 use(login),
                 range(0, 1); //  iterate over result set one row at a time
-
+            a._login = login;
+            a._password = "*******";
             select.execute();
             Poco::Data::RecordSet rs(select);
             if (rs.moveFirst()) return a;
