@@ -102,20 +102,18 @@ public:
             b64in << token;
             b64in.close();
             std::string identity = "Basic " + os.str();
-
             Poco::Net::HTTPClientSession s(uri.getHost(), uri.getPort());
             Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, uri.toString());
             request.setVersion(Poco::Net::HTTPMessage::HTTP_1_1);
-            request.setContentType("application/json");
-            request.set("Authorization", identity);
-            request.set("Accept", "application/json");
             request.setKeepAlive(true);
+            // request.setCredentials(scheme, token);
+            request.add("Authorization", identity);
+            request.add("Access-Control-Allow-Origin", "*");
 
+            // curl --location 'http://localhost:8080/auth/' --header 'Authorization: Basic <token>'
             s.sendRequest(request);
-
             Poco::Net::HTTPResponse response;
             std::istream &rs = s.receiveResponse(response);
-
             while (rs)
             {
                 char c{};
@@ -129,7 +127,7 @@ public:
         }
         catch (Poco::Exception &ex)
         {
-            std::cout << "exception:" << ex.what() << std::endl;
+            std::cout << "exception: " << ex.what() << "; message: " << ex.message() << std::endl;
             return std::optional<std::string>();
         }
 
@@ -148,8 +146,10 @@ public:
             request.getCredentials(scheme, info);
             std::string login, password, url;
             get_identity(info, login, password);
+            std::string host = "192.168.55.2";
+            std::string auth_port = "8080";
+            url = "http://" + host + ":" + auth_port + "/auth/";
             Poco::URI uri(url);
-            url = "http://" + uri.getHost() + ":8080/auth";
             if (do_get(uri, login, password))
             {
                 if (form.has("id") && hasSubstr(request.getURI(), "/by-id"))
@@ -198,19 +198,19 @@ public:
                 }
                 else if (hasSubstr(request.getURI(), "/package"))
                 {
-                    if (form.has("name") && form.has("weight") && form.has("price"))
+                    if (form.has("name") && form.has("weight") && form.has("price") && form.has("deliveryId"))
                     {
-                        database::Package user;
-                        user.name() = form.get("name");
-                        user.weight() = form.get("weight");
-                        user.price() = form.get("price");
-                        user.login() = login;
+                        database::Package package;
+                        package.name() = form.get("name");
+                        package.weight() = form.get("weight");
+                        package.price() = form.get("price");
+                        package.delivery_id() = atol(form.get("deliveryId").c_str());
 
                         bool check_result = true;
                         std::string message;
                         std::string reason;
 
-                        if (!check_name(user.get_name(), reason))
+                        if (!check_name(package.get_name(), reason))
                         {
                             check_result = false;
                             message += reason;
@@ -220,12 +220,12 @@ public:
 
                         if (check_result)
                         {
-                            user.save_to_mysql();
+                            package.save_to_mysql();
                             response.setStatus(Poco::Net::HTTPResponse::HTTP_OK);
                             response.setChunkedTransferEncoding(true);
                             response.setContentType("application/json");
                             std::ostream &ostr = response.send();
-                            ostr << user.get_id();
+                            ostr << package.get_id();
                             return;
                         }
                         else

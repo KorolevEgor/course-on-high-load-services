@@ -41,7 +41,8 @@ services:
     ports:
       - 8080:8080
     networks:
-      - arch-network
+      arch-network:
+        ipv4_address: 192.168.55.2
     depends_on:
       mai-db-node-ex01:
         condition: service_healthy
@@ -61,7 +62,8 @@ services:
     ports:
       - 8082:8082
     networks:
-      - arch-network
+      arch-network:
+        ipv4_address: 192.168.55.3
     depends_on:
       mai-db-node-ex01:
         condition: service_healthy
@@ -81,7 +83,8 @@ services:
     ports:
       - 8081:8081
     networks:
-      - arch-network
+      arch-network:
+        ipv4_address: 192.168.55.4
     depends_on:
       mai-db-node-ex01:
         condition: service_healthy
@@ -92,4 +95,6 @@ volumes:
 networks:
   arch-network:
     driver: "bridge"
-    external: false
+    ipam:
+      config:
+        - subnet: 192.168.55.0/16

@@ -109,20 +109,18 @@ public:
             b64in << token;
             b64in.close();
             std::string identity = "Basic " + os.str();
-            
             Poco::Net::HTTPClientSession s(uri.getHost(), uri.getPort());
             Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, uri.toString());
             request.setVersion(Poco::Net::HTTPMessage::HTTP_1_1);
-            request.setContentType("application/json");
-            request.set("Authorization", identity);
-            request.set("Accept", "application/json");
             request.setKeepAlive(true);
+            // request.setCredentials(scheme, token);
+            request.add("Authorization", identity);
+            request.add("Access-Control-Allow-Origin", "*");
 
+            // curl --location 'http://localhost:8080/auth/' --header 'Authorization: Basic <token>'
             s.sendRequest(request);
-
             Poco::Net::HTTPResponse response;
             std::istream &rs = s.receiveResponse(response);
-
             while (rs)
             {
                 char c{};
@@ -130,15 +128,13 @@ public:
                 if (rs)
                     string_result += c;
             }
-            std :: cout<<17;
 
             if (response.getStatus() != 200)
                 return {};
-            std :: cout<<3;
         }
         catch (Poco::Exception &ex)
         {
-            std::cout << "exception:" << ex.what() << std::endl;
+            std::cout << "exception: " << ex.what() << "; message: " << ex.message() << std::endl;
             return std::optional<std::string>();
         }
 
@@ -149,7 +145,6 @@ public:
                        HTTPServerResponse &response)
     {
         HTMLForm form(request, request.stream());
-        read_by_names
         try
         {
             std::string scheme;
@@ -157,8 +152,10 @@ public:
             request.getCredentials(scheme, info);
             std::string login, password, url;
             get_identity(info, login, password);
+            std::string host = "192.168.55.2";
+            std::string auth_port = "8080";
+            url = "http://" + host + ":" + auth_port + "/auth/";
             Poco::URI uri(url);
-            url = "http://" + uri.getHost() + ":8080/auth";
             if (do_get(uri, login, password))
             {
                 if (hasSubstr(request.getURI(), "/get-state"))
@@ -239,8 +236,8 @@ public:
                     return;
                 }
                 else if (hasSubstr(request.getURI(), "/delivery") && 
-                        form.has("recipient_name") && form.has("sender_name") && form.has("state") && 
-                        form.has("sender_addres")  && form.has("date") && form.has("recipient_addres"))
+                        form.has("recipient_name") && form.has("sender_name") && 
+                        form.has("sender_addres") && form.has("recipient_addres") && form.has("date"))
                 {
                     database::Delivery user;
                     user.recipient_name() = form.get("recipient_name");
@@ -248,7 +245,6 @@ public:
                     user.recipient_addres() = form.get("recipient_addres");
                     user.sender_addres() = form.get("sender_addres");
                     user.date() = form.get("date");
-                    user.state() = form.get("state");
 
                     bool check_result = true;
                     std::string message;
@@ -256,7 +252,7 @@ public:
 
                     if (check_result)
                     {
-                        user.save_to_mysql();
+                        user.save_new_to_mysql();
                         response.setStatus(Poco::Net::HTTPResponse::HTTP_OK);
                         response.setChunkedTransferEncoding(true);
                         response.setContentType("application/json");
