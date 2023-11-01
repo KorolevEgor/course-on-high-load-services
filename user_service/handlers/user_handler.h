@@ -167,11 +167,9 @@ public:
             }
             else if (hasSubstr(request.getURI(), "/auth"))
             {
-
                 std::string scheme;
                 std::string info;
                 request.getCredentials(scheme, info);
-                std::cout << "scheme: " << scheme << " identity: " << info << std::endl;
 
                 std::string login, password;
                 if (scheme == "Basic")
