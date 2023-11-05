@@ -73,7 +73,7 @@ namespace database{
         try {
             long id = -1;
             Poco::Data::Statement select(session);
-            select << "SELECT next value for main_id_sequence " << squence_sharding_hint(),
+            select << "SELECT next value for user_id_sequence " << squence_sharding_hint(),
                 into(id),
                 range(0, 1);
 
