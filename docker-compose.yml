@@ -3,7 +3,7 @@ version: '3.3'
 services:
   db_node_01:
     build:
-      context: mariadb
+      context: docker/mariadb
       dockerfile: Dockerfile
     container_name: db_node_01
     restart: unless-stopped
@@ -24,13 +24,13 @@ services:
       test: "/usr/bin/mysql --host=db_node_01 --database=archdb --user=stud --password=stud --execute \"SHOW DATABASES;\""
       timeout: 5s
       retries: 5
-    volumes:
-      - ./mariadb/rollout/user:/docker-entrypoint-initdb.d
+    # volumes:
+    #   - ./mariadb/rollout/user:/docker-entrypoint-initdb.d
       # - db-node-01-data:/var/lib/mysql
 
   db_node_02:
     build:
-      context: mariadb
+      context: docker/mariadb
       dockerfile: Dockerfile
     container_name: db_node_02
     restart: unless-stopped
@@ -51,14 +51,14 @@ services:
       test: "/usr/bin/mysql --host=db_node_02 --database=archdb --user=stud --password=stud --execute \"SHOW DATABASES;\""
       timeout: 5s
       retries: 5
-    volumes:
-      - ./mariadb/rollout/user:/docker-entrypoint-initdb.d
+    # volumes:
+    #   - ./mariadb/rollout/user:/docker-entrypoint-initdb.d
       # - db-node-02-data:/var/lib/mysql
 
 # sequences
   db_node_03:
     build:
-      context: mariadb
+      context: docker/mariadb
       dockerfile: Dockerfile
     container_name: db_node_03
     restart: unless-stopped
@@ -79,13 +79,13 @@ services:
       test: "/usr/bin/mysql --host=db_node_03 --database=archdb --user=stud --password=stud --execute \"SHOW DATABASES;\""
       timeout: 5s
       retries: 5
-    volumes:
-      - ./mariadb/rollout/sequence:/docker-entrypoint-initdb.d
+    # volumes:
+    #   - ./mariadb/rollout/sequence:/docker-entrypoint-initdb.d
       # - db-node-03-data:/var/lib/mysql
 
   proxysql:
     build:
-      context: proxysql
+      context: docker/proxysql
       dockerfile: Dockerfile
     container_name: proxysql
     # command: >
@@ -93,7 +93,7 @@ services:
     # volumes:
     #   - proxysql-data:/var/lib/proxysql
     healthcheck:
-      test: "/usr/bin/mysql --user=stud --password=stud --execute \"SHOW DATABASES;\""
+      test: "/usr/bin/mariadb --user=stud --password=stud --execute \"SHOW DATABASES;\""
       timeout: 20s
       retries: 5
     depends_on:
@@ -111,7 +111,7 @@ services:
   user_service:
     build:
       context: .
-      dockerfile: user_service/Dockerfile
+      dockerfile: docker/user_service/Dockerfile
     container_name: user_service
     environment:
       - DB_HOST=proxysql
@@ -131,7 +131,7 @@ services:
   package_service:
     build:
       context: .
-      dockerfile: package_service/Dockerfile
+      dockerfile: docker/package_service/Dockerfile
     container_name: package_service
     environment:
       - DB_HOST=proxysql
@@ -151,7 +151,7 @@ services:
   delivery_service:
     build:
       context: .
-      dockerfile: delivery_service/Dockerfile
+      dockerfile: docker/delivery_service/Dockerfile
     container_name: delivery_service
     environment:
       - DB_HOST=proxysql
