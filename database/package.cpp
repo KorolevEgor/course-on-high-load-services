@@ -31,7 +31,7 @@ namespace database
                         << "`weight` VARCHAR(256) NOT NULL,"
                         << "`price` VARCHAR(256) NOT NULL,"
                         << "`delivery_id` INT NOT NULL,"
-                        << "FOREIGN KEY (`delivery_id`) REFERENCES `Delivery` (`id`));",
+                        << "FOREIGN KEY (`delivery_id`) REFERENCES `Delivery` (`id`))-- sharding:0;",
                 now;
         }
 

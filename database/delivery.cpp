@@ -34,7 +34,7 @@ namespace database
                         << "`date` VARCHAR(256) NOT NULL,"
                         << "`state` VARCHAR(256) NULL,"
                         << "FOREIGN KEY (`recipient_name`) REFERENCES `User` (`login`),"
-                        << "FOREIGN KEY (`sender_name`) REFERENCES `User` (`login`));",
+                        << "FOREIGN KEY (`sender_name`) REFERENCES `User` (`login`))-- sharding:0;",
                 now;
         }
 

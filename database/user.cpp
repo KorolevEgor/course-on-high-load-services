@@ -19,6 +19,42 @@ using Poco::Data::Statement;
 namespace database
 {
 
+    void User::init()
+    {
+        try
+        {
+            Poco::Data::Session session = database::Database::get().create_session();
+
+            std::vector<std::string> shards = database::Database::get_all_hints();
+            for (const std::string &shard: shards) {
+                Statement create_stmt(session);
+                create_stmt << "CREATE TABLE IF NOT EXISTS `User` (`id` INT NOT NULL AUTO_INCREMENT,"
+                            << "`first_name` VARCHAR(256) NOT NULL,"
+                            << "`last_name` VARCHAR(256) NOT NULL,"
+                            << "`login` VARCHAR(256) UNIQUE NOT NULL,"
+                            << "`password` VARCHAR(256) NOT NULL,"
+                            << "`addres` VARCHAR(256) NULL,"
+                            << "PRIMARY KEY (`id`),KEY `fn` (`first_name`),KEY `ln` (`last_name`));"
+                            << shard,
+                    now;
+                std::cout << create_stmt.toString() << std::endl;
+            }
+            Statement create_seq_stmt(session);
+            create_seq_stmt << "create sequence if not exists user_id_sequence;" << database::Database::squence_sharding_hint(), now;
+            std::cout << create_seq_stmt.toString() << std::endl;
+        }
+        catch (Poco::Data::MySQL::ConnectionException &e)
+        {
+            std::cout << "connection:" << e.what() << std::endl;
+            throw;
+        }
+        catch (Poco::Data::MySQL::StatementException &e)
+        {
+            std::cout << "statement:" << e.what() << std::endl;
+            throw;
+        }
+    }
+
     Poco::JSON::Object::Ptr User::toJSON() const
     {
         Poco::JSON::Object::Ptr root = new Poco::JSON::Object();
@@ -55,10 +91,10 @@ namespace database
         try
         {
             Poco::Data::Session session = database::Database::get().create_session();
-            Poco::Data::Statement select(session);
             long id;
             std::vector<std::string> shards = database::Database::get_all_hints();
             for (const std::string &shard: shards) {
+                Poco::Data::Statement select(session);
                 select << "SELECT id FROM User where login=? and password=?"
                        << shard,
                     into(id),
@@ -124,10 +160,10 @@ namespace database
         try
         {
             Poco::Data::Session session = database::Database::get().create_session();
-            Poco::Data::Statement select(session);
             User a;
             std::vector<std::string> shards = database::Database::get_all_hints();
             for (const std::string &shard: shards) {
+                Poco::Data::Statement select(session);
                 select << "SELECT id, first_name, last_name, addres FROM User where login=?"
                        << shard,
                     into(a._id),
@@ -144,7 +180,6 @@ namespace database
                 if (rs.moveFirst()) return a;
             }
         }
-
         catch (Poco::Data::MySQL::ConnectionException &e)
         {
             std::cout << "connection:" << e.what() << std::endl;
@@ -163,11 +198,11 @@ namespace database
         try
         {
             Poco::Data::Session session = database::Database::get().create_session();
-            Statement select(session);
             std::vector<User> result;
             std::vector<std::string> shards = database::Database::get_all_hints();
             for (const std::string &shard: shards) {
                 User a;
+                Poco::Data::Statement select(session);
                 select << "SELECT id, first_name, last_name, addres, login, password FROM User"
                        << shard,
                     into(a._id),
@@ -205,13 +240,13 @@ namespace database
         try
         {
             Poco::Data::Session session = database::Database::get().create_session();
-            Statement select(session);
             std::vector<User> result;
             first_name += "%";
             last_name += "%";
             std::vector<std::string> shards = database::Database::get_all_hints();
             for (const std::string &shard: shards) {
                 User a;
+                Poco::Data::Statement select(session);
                 select << "SELECT id, first_name, last_name, addres, login, password FROM User where first_name LIKE ? and last_name LIKE ?"
                        << shard,
                     into(a._id),
@@ -265,7 +300,6 @@ namespace database
                 use(_password);
 
             insert.execute();
-            select.execute();
             std::cout << "inserted:" << _id << std::endl;
         }
         catch (Poco::Data::MySQL::ConnectionException &e)
