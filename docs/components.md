@@ -27,11 +27,20 @@ Person(admin, "Администратор", $sprite="users")
 
 System_Ext(web_site, "Клиентский веб-сайт", "HTML, CSS, JavaScript, React", "Веб-интерфейс", $sprite="react")
 
-System_Boundary(site, "Сайт доставки посылок") {
-   Container(user_service, "Сервис регистрации, авиризации", "C++", "Сервис авторизации и CRUD над пользователями", $tags = "microService", $sprite="cplusplus")
+System_Boundary(site, "Доставка посылок") {
+   Container(user_service, "Сервис работы с пользователями, авиризация", "C++", "Сервис авторизации и действий над пользователями", $tags = "microService", $sprite="cplusplus")
    Container(delivery_service, "Сервис доставкок", "C++", "Сервис для создания, редактирования, просмотра доставок", $tags = "microService", $sprite="cplusplus")
    Container(package_service, "Сервис посылкок", "C++", "Сервис для создания, редактирования, просмотра посылок", $tags = "microService", $sprite="cplusplus")
-   ContainerDb(db, "База данных", "MySQL", "Хранение данных о пользователях, посылках и доставках", $tags = "storage", $sprite="mysql")
+   Container(event_listener, "Сервис слушатель событий", "C++", "Сервис для прослушивания событий на сохранение пользователей", $tags = "microService", $sprite="cplusplus")
+
+   Container(proxysql, "proxysql", "Proxy")
+   ContainerDb(db, "db node 01", "MySQL", "Хранение данных о пользователях, посылках и доставках", $tags = "storage", $sprite="mysql")
+   ContainerDb(db2, "db node 02", "MySQL", "Хранение данных о пользователях", $tags = "storage", $sprite="mysql")
+   ContainerDb(db3, "db node 03", "MySQL", "Хранение данных о последовательностях", $tags = "storage", $sprite="mysql")
+
+   ContainerDb(redis, "Redis", "Redis", "Хранение данных о пользователях", $tags = "storage", $sprite="redis")
+
+   SystemQueue(kafka, "Kafka", "Пользователи для сохранения/обновления")
 }
 
 Rel(sender, web_site, "Создание, просмотр, отмена доставки посылки")
@@ -39,14 +48,26 @@ Rel(receiver, web_site, "Получение информации по доста
 Rel_R(courier, web_site, "Получение, обновление информации по доставкам")
 Rel_L(admin, web_site, "Получение/обновление/удаление информации по отправителям/курьерам/доставкам")
 
-Rel(web_site, user_service, "Авторизация, регистрация", "localhost/auth")
-Rel(user_service, db, "INSERT/SELECT/UPDATE", "SQL")
+Rel(web_site, user_service, "Авторизация, регистрация, поиск", "localhost/auth")
+Rel(user_service, proxysql, "INSERT/SELECT/UPDATE", "SQL")
+Rel(user_service, redis, "save/select")
 
 Rel(web_site, delivery_service, "Работа с доставками", "localhost/delivery")
-Rel(delivery_service, db, "INSERT/SELECT/UPDATE", "SQL")
+Rel(delivery_service, proxysql, "INSERT/SELECT/UPDATE", "SQL")
 
 Rel(web_site, package_service, "Работа с посылками", "localhost/package")
-Rel(package_service, db, "INSERT/SELECT/UPDATE", "SQL")
+Rel(package_service, proxysql, "INSERT/SELECT/UPDATE", "SQL")
+
+Rel(proxysql, db, "INSERT/SELECT/UPDATE")
+Rel(proxysql, db2, "INSERT/SELECT/UPDATE")
+Rel(proxysql, db3, "SELECT")
+
+Rel(delivery_service, user_service, "Авторизация")
+Rel(package_service, user_service, "Авторизация")
+
+Rel(user_service, kafka, "Отправляет пользователей на сохранение/обновление")
+Rel(kafka, event_listener, "Потребляет пользователей на сохранение/обновление")
+Rel(event_listener, proxysql, "INSERT/SELECT/UPDATE", "SQL")
 
 @enduml
 ```
