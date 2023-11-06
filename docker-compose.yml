@@ -108,6 +108,55 @@ services:
       # Mysql Admin Port
       - "6032:6032"
 
+  kafka1:
+    image: 'bitnami/kafka:latest'
+    container_name: kafka1
+    environment:
+      KAFKA_ENABLE_KRAFT: "yes"
+      KAFKA_CFG_PROCESS_ROLES: "broker,controller"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka1:9092"
+      KAFKA_BROKER_ID: 1
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9093"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_KRAFT_CLUSTER_ID: "dh6khitPSDGZSBOjNeTC_g"
+    volumes:
+      - kafka_volume1:/bitnami/kafka
+    networks:
+      - arch-network
+    healthcheck:
+    # хака, не получилось сделать нормальный healthcheck
+      test: "ls" 
+      start_period: 10s
+
+  kafka2:
+    image: 'bitnami/kafka:latest'
+    container_name: kafka2
+    environment:
+      KAFKA_ENABLE_KRAFT: "yes"
+      KAFKA_CFG_PROCESS_ROLES: "broker,controller"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka2:9092"
+      KAFKA_BROKER_ID: 2
+      KAFKA_CFG_NODE_ID: 2
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9093"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_KRAFT_CLUSTER_ID: "dh6khitPSDGZSBOjNeTC_g"
+    volumes:
+      - kafka_volume2:/bitnami/kafka
+    networks:
+      - arch-network
+    healthcheck:
+      test: "ls"
+      start_period: 10s
+
   user_service:
     build:
       context: .
@@ -121,6 +170,9 @@ services:
       - DB_DATABASE=archdb
       - CACHE_HOST=cache
       - CACHE_PORT=6379
+      - QUEUE_HOST=kafka1:9092
+      - QUEUE_TOPIC=event_server
+      - QUEUE_GROUP_ID=0
     ports:
       - 8080:8080
     networks:
@@ -128,6 +180,36 @@ services:
         ipv4_address: 192.168.55.2
     depends_on:
       proxysql:
+        condition: service_healthy
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy
+
+  event_listener:
+    build:
+      context: .
+      dockerfile: docker/event_listener/Dockerfile
+    container_name: event_listener
+    environment:
+      - DB_HOST=proxysql
+      - DB_PORT=6033
+      - DB_LOGIN=stud
+      - DB_PASSWORD=stud
+      - DB_DATABASE=archdb
+      - CACHE_HOST=cache
+      - CACHE_PORT=6379
+      - QUEUE_HOST=kafka1:9092
+      - QUEUE_TOPIC=event_server
+      - QUEUE_GROUP_ID=0
+    networks:
+      - arch-network
+    depends_on:
+      proxysql:
+        condition: service_healthy
+      kafka1:
+        condition: service_healthy
+      kafka2:
         condition: service_healthy
 
   cache:
@@ -152,6 +234,9 @@ services:
       - DB_LOGIN=stud
       - DB_PASSWORD=stud
       - DB_DATABASE=archdb
+      - QUEUE_HOST=kafka1:9092
+      - QUEUE_TOPIC=event_server
+      - QUEUE_GROUP_ID=0
     ports:
       - 8082:8082
     networks:
@@ -172,6 +257,9 @@ services:
       - DB_LOGIN=stud
       - DB_PASSWORD=stud
       - DB_DATABASE=archdb
+      - QUEUE_HOST=kafka1:9092
+      - QUEUE_TOPIC=event_server
+      - QUEUE_GROUP_ID=0
     ports:
       - 8081:8081
     networks:
@@ -187,6 +275,8 @@ volumes:
   db-node-03-data:
   proxysql-data:
   cache:
+  kafka_volume1:
+  kafka_volume2:
 
 networks:
   arch-network:

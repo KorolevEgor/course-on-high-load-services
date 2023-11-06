@@ -19,6 +19,7 @@
 #include "Poco/Util/Option.h"
 #include "Poco/Util/OptionSet.h"
 #include "Poco/Util/HelpFormatter.h"
+#include <cppkafka/cppkafka.h>
 #include <iostream>
 #include <iostream>
 #include <fstream>
@@ -45,6 +46,11 @@ using Poco::Util::ServerApplication;
 
 #include "../../database/user.h"
 #include "../../helper.h"
+#include "../config/config.h"
+
+#define SEND_ATTEMPTS 10
+#define QUEUE_EVENT_CREATE "create_event"
+#define QUEUE_EVENT_UPDATE "update_event"
 
 static bool hasSubstr(const std::string &str, const std::string &substr)
 {
@@ -64,28 +70,41 @@ static bool hasSubstr(const std::string &str, const std::string &substr)
 class UserHandler : public HTTPRequestHandler
 {
 private:
-    bool check_name(const std::string &name, std::string &reason)
-    {
-        if (name.length() < 3)
-        {
-            reason = "Name must be at leas 3 signs";
-            return false;
-        }
+    bool send_to_queue(database::User &user) {
+        static cppkafka::Configuration config ={
+            {"metadata.broker.list", Config::get().get_queue_host()},
+            {"acks","all"}};
+        static cppkafka::Producer producer(config);
+        static std::mutex mtx;
+        static int message_key{0};
+        using Hdr = cppkafka::MessageBuilder::HeaderType;
 
-        if (name.find(' ') != std::string::npos)
-        {
-            reason = "Name can't contain spaces";
-            return false;
-        }
+        std::lock_guard<std::mutex> lock(mtx);
+        std::stringstream ss;
+        Poco::JSON::Stringifier::stringify(user.toJSON(), ss);
+        std::string message = ss.str();
+        std::string event_type = user.get_id() > 0 ? QUEUE_EVENT_UPDATE : QUEUE_EVENT_CREATE;
+        bool not_sent = true;
+        int attempts = 0;
 
-        if (name.find('\t') != std::string::npos)
-        {
-            reason = "Name can't contain spaces";
-            return false;
-        }
+        cppkafka::MessageBuilder builder(Config::get().get_queue_topic());
+        std::string mk=std::to_string(++message_key);
+        builder.key(mk);
+        builder.header(Hdr{"event_type", event_type});
+        builder.payload(message);
 
-        return true;
-    };
+        while (not_sent && attempts < SEND_ATTEMPTS) {
+            try {
+                producer.produce(builder);
+                not_sent = false;
+                std::cout << "[QUEUE] " << "Sended to queue message id:" << mk << " user:" << user.get_login() << " event:" << event_type << std::endl;
+            } catch (std::exception &ex) {
+                attempts++;
+                std::cout << "[QUEUE] " << "Failed to send to queue: " << ex.what() << std::endl;
+            }
+        }
+        return attempts < SEND_ATTEMPTS;
+    }
 
 public:
     UserHandler(const std::string &format) : _format(format)
@@ -227,50 +246,14 @@ public:
                 user.addres() = form.get("addres");
                 user.login() = form.get("login");
                 user.password() = form.get("password");
+                send_to_queue(user);
 
-                bool check_result = true;
-                std::string message;
-                std::string reason;
-
-                std::optional<database::User> result = database::User::read_by_login(user.login());
-                if (result)
-                {
-                    check_result = false;
-                    message += "User with this login already exists";
-                    message += "<br>";
-                }
-                if (!check_name(user.get_first_name(), reason))
-                {
-                    check_result = false;
-                    message += reason;
-                    message += "<br>";
-                }
-
-                if (!check_name(user.get_last_name(), reason))
-                {
-                    check_result = false;
-                    message += reason;
-                    message += "<br>";
-                }
-
-                if (check_result)
-                {
-                    user.save_to_mysql();
-                    response.setStatus(Poco::Net::HTTPResponse::HTTP_OK);
-                    response.setChunkedTransferEncoding(true);
-                    response.setContentType("application/json");
-                    std::ostream &ostr = response.send();
-                    ostr << user.get_id();
-                    return;
-                }
-                else
-                {
-                    response.setStatus(Poco::Net::HTTPResponse::HTTP_NOT_FOUND);
-                    std::ostream &ostr = response.send();
-                    ostr << message;
-                    response.send();
-                    return;
-                }
+                response.setStatus(Poco::Net::HTTPResponse::HTTP_OK);
+                response.setChunkedTransferEncoding(true);
+                response.setContentType("application/json");
+                std::ostream &ostr = response.send();
+                ostr << 0;
+                return;
             }
         }
         catch (...)

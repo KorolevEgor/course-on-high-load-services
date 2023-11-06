@@ -14,6 +14,10 @@ Config::Config()
     if (std::getenv("CACHE_PORT") != nullptr) {
         _cache_port = std::getenv("CACHE_PORT");
     }
+
+    _queue_host = std::getenv("QUEUE_HOST");
+    _queue_topic = std::getenv("QUEUE_TOPIC");
+    _queue_group_id  = std::getenv("QUEUE_GROUP_ID");
 }
 
 Config &Config::get()
@@ -77,4 +81,33 @@ std::string &Config::password()
 std::string &Config::database()
 {
     return _database;
+}
+
+std::string &Config::queue_group_id()
+{
+    return _queue_group_id;
+}
+
+const std::string &Config::get_queue_group_id() const
+{
+    return _queue_group_id;
+}
+std::string &Config::queue_host()
+{
+    return _queue_host;
+}
+
+std::string &Config::queue_topic()
+{
+    return _queue_topic;
+}
+
+const std::string &Config::get_queue_host() const
+{
+    return _queue_host;
+}
+
+const std::string &Config::get_queue_topic() const
+{
+    return _queue_topic;
 }

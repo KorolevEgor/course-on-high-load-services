@@ -45,6 +45,7 @@ class HTTPWebServer : public Poco::Util::ServerApplication
 public:
     int main([[maybe_unused]] const std::vector<std::string> &args)
     {
+            std::cout << "1" << std::endl;
             database::Delivery::init();
             ServerSocket svs(Poco::Net::SocketAddress("0.0.0.0", 8081));
             HTTPServer srv(new HTTPRequestFactory(DateTimeFormat::SORTABLE_FORMAT), svs, new HTTPServerParams);

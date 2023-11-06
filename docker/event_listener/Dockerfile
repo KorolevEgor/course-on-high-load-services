@@ -10,4 +10,4 @@ COPY . /course-on-high-load-services/
 # RUN git clone https://github.com/KorolevEgor/course-on-high-load-services.git
 RUN sudo ldconfig
 RUN cd ./course-on-high-load-services && mkdir build && cd build && cmake  .. && make
-ENTRYPOINT [ "course-on-high-load-services/build/user_service" ]
+ENTRYPOINT [ "course-on-high-load-services/build/event_listener" ]
