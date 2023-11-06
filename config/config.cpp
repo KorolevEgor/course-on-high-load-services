@@ -2,11 +2,18 @@
 
 Config::Config()
 {
-        _host = std::getenv("DB_HOST");
-        _port = std::getenv("DB_PORT");
-        _login = std::getenv("DB_LOGIN");
-        _password = std::getenv("DB_PASSWORD");
-        _database = std::getenv("DB_DATABASE");
+    _host = std::getenv("DB_HOST");
+    _port = std::getenv("DB_PORT");
+    _login = std::getenv("DB_LOGIN");
+    _password = std::getenv("DB_PASSWORD");
+    _database = std::getenv("DB_DATABASE");
+    
+    if (std::getenv("CACHE_HOST") != nullptr) {
+        _cache_host = std::getenv("CACHE_HOST");
+    }
+    if (std::getenv("CACHE_PORT") != nullptr) {
+        _cache_port = std::getenv("CACHE_PORT");
+    }
 }
 
 Config &Config::get()
@@ -37,6 +44,14 @@ const std::string &Config::get_password() const
 const std::string &Config::get_database() const
 {
     return _database;
+}
+
+const std::string &Config::get_cache_host() const {
+    return _cache_host;
+}
+
+const std::string &Config::get_cache_port() const {
+    return _cache_port;
 }
 
 std::string &Config::port()

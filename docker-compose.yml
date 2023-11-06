@@ -119,6 +119,8 @@ services:
       - DB_LOGIN=stud
       - DB_PASSWORD=stud
       - DB_DATABASE=archdb
+      - CACHE_HOST=cache
+      - CACHE_PORT=6379
     ports:
       - 8080:8080
     networks:
@@ -127,6 +129,17 @@ services:
     depends_on:
       proxysql:
         condition: service_healthy
+
+  cache:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning 
+    networks:
+      - arch-network
+    volumes: 
+      - cache:/data
 
   package_service:
     build:
@@ -173,6 +186,7 @@ volumes:
   db-node-02-data:
   db-node-03-data:
   proxysql-data:
+  cache:
 
 networks:
   arch-network:

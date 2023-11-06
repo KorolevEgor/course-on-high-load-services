@@ -6,6 +6,11 @@ SET (USER_SERVICE "user_service")
 SET (PACKAGE_SERVICE "package_service")
 SET (DELIVERY_SERVICE "delivery_service")
 
+SET (STD_CXX "c++17")
+SET (REDISCPP_FLAGS "-DREDISCPP_HEADER_ONLY=ON")
+SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -std=${STD_CXX} ${REDISCPP_FLAGS}")
+SET (CMAKE_CXX_FLAGS_RELEASE "-O3 -g0 -std=${STD_CXX} -Wall -DNDEBUG ${REDISCPP_FLAGS}")
+
 find_package(OpenSSL)
 find_package(Threads)
 find_package(ZLIB)
@@ -27,7 +32,8 @@ SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_executable(${USER_SERVICE} main_user.cpp 
                                  config/config.cpp 
                                  database/database.cpp
-                                 database/user.cpp)
+                                 database/user.cpp
+                                 database/cache.cpp)
 
 
 target_include_directories(${USER_SERVICE} PRIVATE "${CMAKE_BINARY_DIR}")
