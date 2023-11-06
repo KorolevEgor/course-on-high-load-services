@@ -1,6 +1,7 @@
 #include "user.h"
 #include "database.h"
 #include "../config/config.h"
+#include "cache.h"
 
 #include <Poco/Data/MySQL/Connector.h>
 #include <Poco/Data/MySQL/MySQLException.h>
@@ -69,12 +70,9 @@ namespace database
         return root;
     }
 
-    User User::fromJSON(const std::string &str)
+    User User::from_json_object(Poco::JSON::Object::Ptr object)
     {
         User user;
-        Poco::JSON::Parser parser;
-        Poco::Dynamic::Var result = parser.parse(str);
-        Poco::JSON::Object::Ptr object = result.extract<Poco::JSON::Object::Ptr>();
 
         user.id() = object->getValue<long>("id");
         user.first_name() = object->getValue<std::string>("first_name");
@@ -86,8 +84,63 @@ namespace database
         return user;
     }
 
+    User User::fromJson(const std::string &str) {
+        Poco::JSON::Parser parser;
+        Poco::Dynamic::Var result = parser.parse(str);
+        Poco::JSON::Object::Ptr object = result.extract<Poco::JSON::Object::Ptr>();
+        return from_json_object(object);
+    }
+
+    void User::save_to_cache() {
+        try {
+            std::stringstream ss;
+            Poco::JSON::Stringifier::stringify(toJSON(), ss);
+            std::string obj = ss.str();
+            database::Cache::get().put(std::to_string(_id), obj);
+            database::Cache::get().put(_login, obj);
+        } catch (std::exception &e) {
+            std::cerr << "Failed to save user to cache: " << e.what() << std::endl;
+        }
+    }
+
+    User User::get_from_cache_by_id(long id) {
+        try {
+            std::string result;
+            if (database::Cache::get().get(std::to_string(id), result))
+                return fromJson(result);
+            else
+                return empty();
+        } catch (std::exception &e) {
+            std::cerr << "Failed to get user from cache by id: " << e.what() << std::endl;
+            return empty();
+        }
+    }
+
+    User User::get_from_cache_by_login(std::string login) {
+        try {
+            std::string result;
+            if (database::Cache::get().get(login, result))
+                return fromJson(result);
+            else
+                return empty();
+        } catch (std::exception &e) {
+            std::cerr << "Failed to get user from cache by login: " << e.what() << std::endl;
+            return empty();
+        }
+    }
+
     std::optional<long> User::auth(std::string &login, std::string &password)
     {
+
+        User user = get_from_cache_by_login(login);
+        if (user.get_id() > 0) {
+            std::cout << "Got user from cache!" << std::endl;
+            if (user.get_password() == password) {
+                return user.get_id();
+            }
+            std::cout << "Failed to auth user by cache, trying db!" << std::endl;
+        }
+
         try
         {
             Poco::Data::Session session = database::Database::get().create_session();
@@ -104,24 +157,37 @@ namespace database
 
                 select.execute();
                 Poco::Data::RecordSet rs(select);
-                if (rs.moveFirst()) return id;
+                if (rs.moveFirst()) {
+                    if (database::Cache::get().is_cache_enabled()) {
+                        User user = read_by_id(id).value();
+                        user.save_to_cache();
+                    }
+                    return id;
+                }
             }
         }
 
         catch (Poco::Data::MySQL::ConnectionException &e)
         {
-            std::cout << "connection:" << e.what() << std::endl;
+            std::cerr << "connection:" << e.what() << std::endl;
         }
         catch (Poco::Data::MySQL::StatementException &e)
         {
 
-            std::cout << "statement:" << e.what() << std::endl;
+            std::cerr << "statement:" << e.what() << std::endl;
         }
         return {};
     }
 
     std::optional<User> User::read_by_id(long id)
     {
+
+        User cache_user = get_from_cache_by_id(id);
+        if (cache_user.get_id() > 0) {
+            std::cout << "Got user from cache!" << std::endl;
+            return cache_user;
+        }
+
         try
         {
             Poco::Data::Session session = database::Database::get().create_session();
@@ -139,17 +205,20 @@ namespace database
                 range(0, 1); //  iterate over result set one row at a time
             select.execute();
             Poco::Data::RecordSet rs(select);
-            if (rs.moveFirst()) return a;
+            if (rs.moveFirst()) {
+                a.save_to_cache();
+                return a;
+            }
         }
 
         catch (Poco::Data::MySQL::ConnectionException &e)
         {
-            std::cout << "connection:" << e.what() << std::endl;
+            std::cerr << "connection:" << e.what() << std::endl;
         }
         catch (Poco::Data::MySQL::StatementException &e)
         {
 
-            std::cout << "statement:" << e.what() << std::endl;
+            std::cerr << "statement:" << e.what() << std::endl;
             
         }
         return {};
@@ -157,6 +226,14 @@ namespace database
 
     std::optional<User> User::read_by_login(std::string &login)
     {
+
+        User user = get_from_cache_by_login(login);
+        if (user.get_id() > 0) {
+            std::cout << "Got user from cache!" << std::endl;
+            return std::optional(user);
+            std::cout << "Failed to auth user by cache, trying db!" << std::endl;
+        }
+
         try
         {
             Poco::Data::Session session = database::Database::get().create_session();
@@ -182,12 +259,12 @@ namespace database
         }
         catch (Poco::Data::MySQL::ConnectionException &e)
         {
-            std::cout << "connection:" << e.what() << std::endl;
+            std::cerr << "connection:" << e.what() << std::endl;
         }
         catch (Poco::Data::MySQL::StatementException &e)
         {
 
-            std::cout << "statement:" << e.what() << std::endl;
+            std::cerr << "statement:" << e.what() << std::endl;
             
         }
         return {};
@@ -237,10 +314,18 @@ namespace database
 
     std::vector<User> User::search(std::string first_name, std::string last_name)
     {
+        std::vector<User> result;
+        User user = empty();
+        user._first_name = first_name;
+        user._last_name = last_name;
+        if (search_by_cache(user, result)) {
+            std::cout << "Get search from cache!" << std::endl;
+            return result;
+        }
+
         try
         {
             Poco::Data::Session session = database::Database::get().create_session();
-            std::vector<User> result;
             first_name += "%";
             last_name += "%";
             std::vector<std::string> shards = database::Database::get_all_hints();
@@ -265,6 +350,7 @@ namespace database
                         result.push_back(a);
                 }
             }
+            save_search_to_cache(user, result);
             return result;
         }
 
@@ -300,6 +386,7 @@ namespace database
                 use(_password);
 
             insert.execute();
+            save_to_cache();
             std::cout << "inserted:" << _id << std::endl;
         }
         catch (Poco::Data::MySQL::ConnectionException &e)
@@ -312,6 +399,65 @@ namespace database
 
             std::cout << "statement:" << e.what() << std::endl;
             throw;
+        }
+    }
+
+    std::string User::build_search_cache_key(User &like_user) {
+        std::string key;
+        if (!like_user.get_login().empty()) {
+            key.append(like_user.get_login());
+        }
+        if (!like_user.get_first_name().empty() && !like_user.get_last_name().empty()) {
+            key.append(like_user.get_first_name() + "-" + like_user.get_last_name());
+        }
+        if (key.empty()) {
+            key = "full";
+        }
+        return key;
+    }
+
+    bool User::search_by_cache(User &like_user, std::vector<User> &search_results) {
+        // Формируем ключ для поиска
+        std::string key = build_search_cache_key(like_user);
+        try {
+            std::cout << "Getting search results by key " << key << std::endl;
+            std::string result_cache;
+            if (database::Cache::get().get(key, result_cache)) {
+                if (result_cache.empty()) {
+                    return false;
+                }
+                Poco::JSON::Parser parser;
+                Poco::Dynamic::Var result = parser.parse(result_cache);
+                Poco::JSON::Array::Ptr array = result.extract<Poco::JSON::Array::Ptr>();
+                for (int i = 0; i < (int) array->size(); i++) {
+                    User user = from_json_object(array->getObject(i));
+                    search_results.push_back(user);
+                }
+                return true;
+            } else {
+                return false;
+            }
+        } catch (std::exception &e) {
+            std::cerr << "Failed to get search results from cache: " << e.what() << std::endl;
+            return false;
+        }
+    }
+
+    void User::save_search_to_cache(User &like_user, std::vector<User> &search_results) {
+        std::string key = build_search_cache_key(like_user);
+
+        try {
+            Poco::JSON::Array arr;
+            for (database::User user: search_results) {
+                arr.add(user.toJSON());
+            }
+            std::stringstream ss;
+            Poco::JSON::Stringifier::stringify(arr, ss);
+            std::string result = ss.str();
+            std::cout << "Saving search results by key " << key << std::endl;
+            database::Cache::get().put(key, result);
+        } catch (std::exception &e) {
+            std::cerr << "Failed to save search results to cache: " << e.what() << std::endl;
         }
     }
 

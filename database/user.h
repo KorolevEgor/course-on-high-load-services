@@ -17,9 +17,23 @@ namespace database
             std::string _login;
             std::string _password;
 
+            void save_to_cache();
+            static User get_from_cache_by_id(long id);
+            static User get_from_cache_by_login(std::string login);
+            static bool search_by_cache(User &likeUser, std::vector<User> &search_results);
+            static void save_search_to_cache(User &like_user, std::vector<User> &search_results);
+            static std::string build_search_cache_key(User &like_user);
+
         public:
 
-            static User fromJSON(const std::string & str);
+            static User empty() {
+                User user;
+                user._id = -1;
+                return user;
+            }
+
+            static User fromJson(const std::string &json);
+            static User from_json_object(Poco::JSON::Object::Ptr);
 
             long             get_id() const;
             const std::string &get_first_name() const;
