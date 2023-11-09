@@ -4,7 +4,7 @@ info:
   title: 'Arch Lab Example API'
   description: API для второго домашнего задания по курсу Архитектура программных систем
 servers:
-  - url: http://localhost:8080
+  - url: http://192.168.55.2:8080
     description: Example server
 paths:
   /auth:

@@ -51,8 +51,13 @@ namespace database {
             if (response.empty())
                 return false;
 
-            val = response.as<std::string>();
-            return true;
+            try {
+                val = response.as<std::string>();
+                return true;
+            } catch (std::exception &e) {
+                std::cerr << "Failed to cast response as string: " << e.what() << std::endl;
+                return false;
+            }
         }
         return false;
     }

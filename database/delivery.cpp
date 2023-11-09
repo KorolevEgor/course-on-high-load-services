@@ -23,22 +23,16 @@ namespace database
     {
         try
         {
-            std::cout << "2" << std::endl;
             Poco::Data::Session session = database::Database::get().create_session();
-            std::cout << "3" << std::endl;
             Statement create_stmt(session);
-            std::cout << "4" << std::endl;
             create_stmt << "CREATE TABLE IF NOT EXISTS `Delivery` (`id` INT PRIMARY KEY NOT NULL AUTO_INCREMENT,"
                         << "`recipient_name` VARCHAR(256) NOT NULL,"
                         << "`sender_name` VARCHAR(256) NOT NULL,"
                         << "`recipient_addres` VARCHAR(256) NOT NULL,"
                         << "`sender_addres` VARCHAR(256) NOT NULL,"
                         << "`date` VARCHAR(256) NOT NULL,"
-                        << "`state` VARCHAR(256) NULL,"
-                        << "FOREIGN KEY (`recipient_name`) REFERENCES `User` (`login`),"
-                        << "FOREIGN KEY (`sender_name`) REFERENCES `User` (`login`))-- sharding:0;",
+                        << "`state` VARCHAR(256) NULL)-- sharding:0;",
                 now;
-                std::cout << "5" << std::endl;
         }
 
         catch (Poco::Data::MySQL::ConnectionException &e)

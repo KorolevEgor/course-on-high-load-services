@@ -105,11 +105,15 @@ namespace database
 
     User User::get_from_cache_by_id(long id) {
         try {
-            std::string result;
+            std::string result = "";
+            std::cout << "Trying to get from cache by id" << std::endl;
             if (database::Cache::get().get(std::to_string(id), result))
-                return fromJson(result);
-            else
-                return empty();
+                {
+                    std::cout << result << std::endl;
+                    return fromJson(result);
+                }
+            std::cout << "empty" << std::endl;
+            return empty();
         } catch (std::exception &e) {
             std::cerr << "Failed to get user from cache by id: " << e.what() << std::endl;
             return empty();
@@ -118,11 +122,15 @@ namespace database
 
     User User::get_from_cache_by_login(std::string login) {
         try {
-            std::string result;
+            std::string result = "";
+            std::cout << "Trying to get from cache by login" << std::endl;
             if (database::Cache::get().get(login, result))
-                return fromJson(result);
-            else
-                return empty();
+                {
+                    std::cout << result << std::endl;
+                    return fromJson(result);
+                }
+            std::cout << "empty" << std::endl;
+            return empty();
         } catch (std::exception &e) {
             std::cerr << "Failed to get user from cache by login: " << e.what() << std::endl;
             return empty();
